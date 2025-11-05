@@ -67,11 +67,6 @@ export default function StudentReviewPage() {
               <p className="mt-2 text-sm">
                 <span className="font-semibold text-green-700">✔ Correct:</span> {q.correctAnswer}
               </p>
-              <p className="text-sm">
-                <span className="font-semibold text-blue-700">🧍 Your Answer:</span>{" "}
-                {q.userAnswer || "Not answered"}
-              </p>
-
             </div>
           ))}
         </div>
