@@ -45,9 +45,8 @@ export default function StudentReviewPage() {
           {review.map((q, i) => (
             <div
               key={i}
-              className={`border p-4 rounded-lg ${
-                q.isCorrect ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"
-              }`}
+              className={`border p-4 rounded-lg ${q.isCorrect ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"
+                }`}
             >
               <h2 className="font-semibold text-gray-800 mb-2">
                 {i + 1}. {q.questionText}
@@ -55,27 +54,24 @@ export default function StudentReviewPage() {
               {q.options.map((opt, j) => (
                 <p
                   key={j}
-                  className={`p-2 rounded ${
-                    opt === q.correctAnswer
-                      ? "bg-green-100 font-semibold"
-                      : opt === q.userAnswer
-                      ? "bg-red-100"
-                      : ""
-                  }`}
+                  className={`p-2 rounded-lg border transition-all ${opt === q.correctAnswer
+                    ? "bg-green-200 border-green-400 font-semibold"
+                    : opt === q.userAnswer && !q.isCorrect
+                      ? "bg-red-200 border-red-400"
+                      : "bg-gray-50 border-gray-200"
+                    }`}
                 >
                   {opt}
                 </p>
               ))}
-              <p className="mt-2 text-sm text-gray-600">
-                Your Answer:{" "}
-                <span
-                  className={`font-semibold ${
-                    q.isCorrect ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {q.userAnswer || "Not answered"}
-                </span>
+              <p className="mt-2 text-sm">
+                <span className="font-semibold text-green-700">✔ Correct:</span> {q.correctAnswer}
               </p>
+              <p className="text-sm">
+                <span className="font-semibold text-blue-700">🧍 Your Answer:</span>{" "}
+                {q.userAnswer || "Not answered"}
+              </p>
+
             </div>
           ))}
         </div>

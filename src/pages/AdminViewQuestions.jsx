@@ -57,8 +57,12 @@ export default function AdminViewQuestions() {
       questionText: q.questionText,
       options: q.options,
       correctAnswer: q.correctAnswer,
+      correctAnswerIndex: q.correctAnswerIndex ?? null,
+      questionTextHi: q.questionTextHi || "",
+      optionsHi: q.optionsHi || ["", "", "", ""],
     });
   };
+
 
   // 🧾 Save Edited Question
   const handleUpdate = async () => {
@@ -84,9 +88,11 @@ export default function AdminViewQuestions() {
       setMessage("✅ Question updated successfully!");
       setEditing(null);
     } catch (err) {
+      console.error(err);
       setMessage("❌ " + err.message);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
@@ -147,46 +153,103 @@ export default function AdminViewQuestions() {
 
       {/* ✏️ Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 text-center">
-              Edit Question
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+            <h2 className="text-xl font-semibold mb-4 text-center text-gray-800">
+              ✏️ Edit Bilingual Question
             </h2>
-            <textarea
-              value={editData.questionText}
-              onChange={(e) =>
-                setEditData({ ...editData, questionText: e.target.value })
-              }
-              className="w-full border p-2 rounded mb-3"
-            />
-            {editData.options.map((opt, i) => (
-              <input
-                key={i}
-                value={opt}
-                onChange={(e) => {
-                  const updated = [...editData.options];
-                  updated[i] = e.target.value;
-                  setEditData({ ...editData, options: updated });
-                }}
+
+            {/* English */}
+            <div className="mb-4">
+              <label className="block font-semibold text-sm mb-1">Question (English)</label>
+              <textarea
+                value={editData.questionText}
+                onChange={(e) =>
+                  setEditData({ ...editData, questionText: e.target.value })
+                }
                 className="w-full border p-2 rounded mb-2"
-                placeholder={`Option ${i + 1}`}
+                rows={2}
               />
+            </div>
+
+            {/* Hindi */}
+            <div className="mb-4">
+              <label className="block font-semibold text-sm mb-1">Question (Hindi)</label>
+              <textarea
+                value={editData.questionTextHi || ""}
+                onChange={(e) =>
+                  setEditData({ ...editData, questionTextHi: e.target.value })
+                }
+                className="w-full border p-2 rounded mb-2"
+                rows={2}
+              />
+            </div>
+
+            {/* Options English + Hindi */}
+            <h3 className="font-semibold mb-2">Options</h3>
+            {editData.options.map((opt, i) => (
+              <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                <input
+                  value={editData.options[i]}
+                  onChange={(e) => {
+                    const updated = [...editData.options];
+                    updated[i] = e.target.value;
+                    setEditData({ ...editData, options: updated });
+                  }}
+                  placeholder={`Option ${i + 1} (English)`}
+                  className="border p-2 rounded"
+                />
+                <input
+                  value={editData.optionsHi?.[i] || ""}
+                  onChange={(e) => {
+                    const updatedHi = [...(editData.optionsHi || [])];
+                    updatedHi[i] = e.target.value;
+                    setEditData({ ...editData, optionsHi: updatedHi });
+                  }}
+                  placeholder={`Option ${i + 1} (Hindi)`}
+                  className="border p-2 rounded"
+                />
+              </div>
             ))}
-            <input
-              type="text"
-              value={editData.correctAnswer}
-              onChange={(e) =>
-                setEditData({ ...editData, correctAnswer: e.target.value })
-              }
-              className="w-full border p-2 rounded mb-4"
-              placeholder="Correct Answer"
-            />
+
+            {/* Correct Answer Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+              <div>
+                <label className="block font-semibold text-sm">Correct Answer (English)</label>
+                <input
+                  type="text"
+                  value={editData.correctAnswer}
+                  onChange={(e) =>
+                    setEditData({ ...editData, correctAnswer: e.target.value })
+                  }
+                  className="w-full border p-2 rounded"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-sm">Correct Answer Index (0–3)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="3"
+                  value={editData.correctAnswerIndex ?? ""}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      correctAnswerIndex: Number(e.target.value),
+                    })
+                  }
+                  className="w-full border p-2 rounded"
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
             <div className="flex justify-between">
               <button
                 onClick={handleUpdate}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
               >
-                Save
+                Save Changes
               </button>
               <button
                 onClick={() => setEditing(null)}

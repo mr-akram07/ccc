@@ -1,372 +1,406 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+/*
+  TestPage.jsx
+  - Shows English (left) and Hindi (right) simultaneously
+  - Answers stored as selected option index (0..n-1)
+  - Works with bilingual questions (preferred) or falls back to single-language
+  - Autosave to localStorage
+  - Submit posts to /api/student/submit (expects auth token in ccc_user)
+*/
 
 export default function TestPage() {
-  const [questions, setQuestions] = useState([]);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState([]);
-  const [timeLeft, setTimeLeft] = useState(60 * 30); // 30 min
+  const navigate = useNavigate();
+
+  const [questions, setQuestions] = useState([]); // array of question objects
+  const [answers, setAnswers] = useState([]); // array of selected index or null
+  const [current, setCurrent] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(60 * 30); // default 30 min
   const [submitted, setSubmitted] = useState(false);
-  const [showResumePopup, setShowResumePopup] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const totalQuestions = questions.length;
+  const STORAGE_KEY = "ccc_test_data_v2";
 
-  // ✅ Load saved test data
-  const loadSavedData = () => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("ccc_test_data"));
-      if (saved && saved.answers && !saved.submitted) return saved;
-    } catch (err) {
-      console.error("Error loading saved data:", err);
-    }
-    return null;
-  };
-
-  const savedData = loadSavedData();
-
-  // ✅ Fetch questions from backend
+  // load saved progress
   useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/student/questions`);
-        const data = await res.json();
-        setQuestions(data);
-        setAnswers(Array(data.length).fill(null));
-      } catch (err) {
-        console.error("Error fetching questions:", err);
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.answers) {
+          setAnswers(parsed.answers);
+          setCurrent(parsed.current || 0);
+          setTimeLeft(parsed.timeLeft ?? 60 * 30);
+          setSubmitted(parsed.submitted || false);
+        }
       }
-    };
-    fetchQuestions();
+    } catch (err) {
+      console.error("load saved:", err);
+    }
   }, []);
 
+  // fetch questions (student public endpoint)
   useEffect(() => {
-    if (savedData && !submitted) setShowResumePopup(true);
-  }, [submitted]);
+    let mounted = true;
+    const fetchQs = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/student/questions`);
+        if (!res.ok) {
+          console.error("Failed to load questions", res.status);
+          setLoadingQuestions(false);
+          return;
+        }
+        const data = await res.json();
 
-  const handleResume = () => {
-    setAnswers(savedData.answers);
-    setCurrentQuestion(savedData.currentQuestion || 0);
-    setTimeLeft(savedData.timeLeft || 60 * 30);
-    setShowResumePopup(false);
-  };
+        // normalize questions: ensure correctAnswerIndex exists
+        const normalized = data.map((q) => {
+          const nq = { ...q };
 
-  const handleStartNew = () => {
-    localStorage.removeItem("ccc_test_data");
-    setAnswers(Array(totalQuestions).fill(null));
-    setCurrentQuestion(0);
-    setTimeLeft(60 * 30);
-    setShowResumePopup(false);
-  };
+          // preferred: correctAnswerIndex
+          if (typeof nq.correctAnswerIndex === "number") {
+            // already present
+          } else if (nq.correctAnswer) {
+            // try to find index by matching text in options
+            const idx = Array.isArray(nq.options) ? nq.options.findIndex((o) => String(o).trim() === String(nq.correctAnswer).trim()) : -1;
+            nq.correctAnswerIndex = idx >= 0 ? idx : null;
+          } else {
+            nq.correctAnswerIndex = null;
+          }
 
-  // ✅ Timer & autosave
+          // if Hindi options missing, keep undefined (UI will fallback to English)
+          return nq;
+        });
+
+        if (!mounted) return;
+        setQuestions(normalized);
+        setAnswers((prev) => {
+          // ensure answers array length matches questions
+          const arr = Array(normalized.length).fill(null);
+          for (let i = 0; i < Math.min(prev.length, normalized.length); i++) arr[i] = prev[i];
+          return arr;
+        });
+        setLoadingQuestions(false);
+      } catch (err) {
+        console.error("Error fetching questions:", err);
+        setLoadingQuestions(false);
+      }
+    };
+
+    fetchQs();
+    return () => (mounted = false);
+  }, []);
+
+  // autosave progress to localStorage every few seconds and on changes
   useEffect(() => {
-    if (showResumePopup || submitted || totalQuestions === 0) return;
+    const save = () => {
+      try {
+        const payload = {
+          answers,
+          current,
+          timeLeft,
+          submitted,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        console.error("autosave error", err);
+      }
+    };
+
+    save();
+    const id = setInterval(save, 5000);
+    return () => clearInterval(id);
+  }, [answers, current, timeLeft, submitted]);
+
+  // timer
+  useEffect(() => {
+    if (submitted) return;
+    if (loadingQuestions) return;
 
     if (timeLeft <= 0) {
       handleSubmit();
       return;
     }
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        const newTime = prev - 1;
-        localStorage.setItem(
-          "ccc_test_data",
-          JSON.stringify({
-            answers,
-            currentQuestion,
-            timeLeft: newTime,
-            submitted,
-          })
-        );
-        return newTime;
-      });
-    }, 1000);
+    const t = setInterval(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [timeLeft, submitted, loadingQuestions]);
 
-    return () => clearInterval(timer);
-  }, [timeLeft, answers, currentQuestion, showResumePopup, submitted, totalQuestions]);
-
-  // ✅ Save progress in localStorage
-  useEffect(() => {
-    if (!showResumePopup && !submitted && totalQuestions > 0) {
-      localStorage.setItem(
-        "ccc_test_data",
-        JSON.stringify({
-          answers,
-          currentQuestion,
-          timeLeft,
-          submitted,
-        })
-      );
-    }
-  }, [answers, currentQuestion, timeLeft, submitted, showResumePopup, totalQuestions]);
-
-  const formatTime = (seconds) => {
-    const min = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return `${min}:${sec < 10 ? "0" : ""}${sec}`;
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec < 10 ? "0" + sec : sec}`;
   };
 
-  const handleAnswerSelect = (opt) => {
-    const updated = [...answers];
-    updated[currentQuestion] = opt;
-    setAnswers(updated);
+  const selectAnswer = (qIndex, optIndex) => {
+    setAnswers((prev) => {
+      const copy = [...prev];
+      copy[qIndex] = optIndex;
+      return copy;
+    });
   };
 
-  // ✅ Submit test (save to backend)
   const handleSubmit = async () => {
     if (submitted) return;
-    setSubmitted(true);
-    window.location.href = "/review";
+    setSaving(true);
 
-    const userData = JSON.parse(localStorage.getItem("ccc_user"));
-    const correctCount = questions.filter(
-      (q, i) => q.correctAnswer === answers[i]
-    ).length;
+    // calculate score
+    const total = questions.length;
+    let correctCount = 0;
+    const answersForPayload = [];
 
-    const resultPayload = {
-      name: userData.user.name,
-      rollNumber: userData.user.rollNumber,
-      answers,
-      score: correctCount,
-      totalQuestions,
-      percentage: ((correctCount / totalQuestions) * 100).toFixed(2),
-    };
-
-    // Save in localStorage
-    localStorage.setItem("ccc_test_data", JSON.stringify({ ...resultPayload, submitted: true }));
-
-    // Send to DB
-    try {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/student/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userData.token}`,
-        },
-        body: JSON.stringify(resultPayload),
-      });
-    } catch (err) {
-      console.error("Error saving result:", err);
+    for (let i = 0; i < total; i++) {
+      const q = questions[i];
+      const userIdx = answers[i];
+      answersForPayload.push(userIdx === null || userIdx === undefined ? null : userIdx);
+      if (typeof q.correctAnswerIndex === "number" && q.correctAnswerIndex === userIdx) correctCount++;
+      else if (q.correctAnswer) {
+        // fall back: compare text
+        const userText = typeof userIdx === "number" && Array.isArray(q.options) ? q.options[userIdx] : null;
+        if (userText && String(userText).trim() === String(q.correctAnswer).trim()) correctCount++;
+      }
     }
+
+    const percent = total ? ((correctCount / total) * 100).toFixed(2) : "0.00";
+
+    // save locally
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        answers: answersForPayload,
+        submitted: true,
+        score: correctCount,
+        totalQuestions: total,
+        percentage: percent,
+      }));
+    } catch (err) {
+      console.error("save local result:", err);
+    }
+
+    // send to backend (requires logged-in student token)
+    try {
+      const user = JSON.parse(localStorage.getItem("ccc_user"));
+      if (user && user.token) {
+        await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/student/submit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify({
+            name: user.user.name,
+            rollNumber: user.user.rollNumber,
+            answers: answersForPayload,
+            score: correctCount,
+            totalQuestions: total,
+            percentage: percent,
+          }),
+        });
+      } else {
+        console.warn("No user token found; result not sent to server.");
+      }
+    } catch (err) {
+      console.error("Error submitting result:", err);
+    }
+
+    setSubmitted(true);
+    setSaving(false);
+    // navigate to review (optional). If you have Review page route:
+    // navigate("/review");
   };
 
-  // ✅ Show results after submission
-  if (submitted) {
-    const correctCount = questions.filter(
-      (q, i) => q.correctAnswer === answers[i]
-    ).length;
-
+  // UI guards
+  if (loadingQuestions) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-center p-6">
-        <h1 className="text-3xl font-bold mb-6 text-green-600">
-          Test Submitted ✅
-        </h1>
-        <p className="text-lg font-medium">Total Questions: {totalQuestions}</p>
-        <p className="text-lg font-medium">Correct Answers: {correctCount}</p>
-        <p className="text-lg font-medium mb-4">
-          Score: {((correctCount / totalQuestions) * 100).toFixed(2)}%
-        </p>
-        <p className="text-gray-600 italic">
-          You cannot retake the test once submitted.
-        </p>
-      </div>
-    );
-  }
-
-  // ✅ Resume test popup
-  if (showResumePopup) {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/60 z-50 p-4 text-center">
-        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg max-w-sm w-full">
-          <h2 className="text-xl font-bold text-gray-800 mb-3">
-            Resume Previous Test?
-          </h2>
-          <p className="text-gray-600 mb-6 text-sm sm:text-base">
-            You have an unfinished test. Would you like to continue where you left off?
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <button
-              onClick={handleResume}
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              Resume Test
-            </button>
-            <button
-              onClick={() => {
-                localStorage.removeItem("ccc_test_data");
-                window.location.href = "/";
-              }}
-              className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition"
-            >
-              Cancel Test
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-
-  if (totalQuestions === 0)
-    return (
-      <div className="flex h-screen justify-center items-center text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
         Loading questions...
       </div>
     );
+  }
 
-  // ✅ Main Test UI
-  return (
-    <div className="min-h-screen bg-gray-100 p-2 sm:p-4 flex flex-col">
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row justify-between items-center bg-white p-3 sm:p-4 rounded-lg shadow mb-3">
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-700">
-            CCC Mock Test
-          </h1>
-          {(() => {
-            const user = JSON.parse(localStorage.getItem("ccc_user"));
-            if (user && user.user) {
-              return (
-                <p className="text-gray-600 text-sm mt-1">
-                  Welcome, {user.user.name} ({user.user.rollNumber})
-                </p>
-              );
-            }
-          })()}
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        No questions available.
+      </div>
+    );
+  }
+
+  if (submitted) {
+    const total = questions.length;
+    const score = JSON.parse(localStorage.getItem(STORAGE_KEY))?.score ?? 0;
+    const percentage = JSON.parse(localStorage.getItem(STORAGE_KEY))?.percentage ?? "0.00";
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+        <div className="bg-white rounded-lg shadow p-6 text-center max-w-xl w-full">
+          <h1 className="text-2xl font-bold mb-3 text-green-700">Test Submitted ✅</h1>
+          <p className="mb-2">Total Questions: {total}</p>
+          <p className="mb-2">Score: {score}</p>
+          <p className="mb-2">Percentage: {percentage}%</p>
+          <p className="text-sm text-gray-600">You cannot retake the test.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-md sm:text-lg font-semibold text-red-500">
-            Time Left: {formatTime(timeLeft)}
-          </div>
+      </div>
+    );
+  }
+
+  const q = questions[current];
+  const total = questions.length;
+
+  // helper: get option list in english / hindi
+  const getOptions = (qObj, lang = "en") => {
+    if (lang === "hi") {
+      if (Array.isArray(qObj.optionsHi) && qObj.optionsHi.length) return qObj.optionsHi;
+      // fallback: mirror english options if hindi missing
+      return Array.isArray(qObj.options) ? qObj.options : [];
+    }
+    return Array.isArray(qObj.options) ? qObj.options : [];
+  };
+
+  const getQuestionText = (qObj, lang = "en") => {
+    if (lang === "hi") return qObj.questionTextHi || qObj.questionText || "";
+    return qObj.questionText || "";
+  };
+
+  // selected index for this question
+  const selectedIndex = answers[current] ?? null;
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      {/* Header */}
+      <header className="bg-white p-4 rounded shadow mb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">CCC Mock Test</h1>
+          <p className="text-sm text-gray-600">
+            {(() => {
+              const u = JSON.parse(localStorage.getItem("ccc_user"));
+              return u?.user ? `Welcome, ${u.user.name} (${u.user.rollNumber})` : "";
+            })()}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="text-red-600 font-semibold">Time Left: {formatTime(timeLeft)}</div>
           <button
             onClick={() => {
               localStorage.removeItem("ccc_user");
-              window.location.href = "/login";
+              navigate("/login");
             }}
-            className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm sm:text-base"
+            className="bg-red-600 text-white px-3 py-1 rounded"
           >
             Logout
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex flex-col md:flex-row flex-1 gap-3 sm:gap-4">
-        <section className="flex-1 bg-white rounded-lg shadow p-3 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold mb-4">
-            Question {currentQuestion + 1} of {totalQuestions}
-          </h2>
-          <p className="text-gray-700 mb-6 text-sm sm:text-base">
-            {questions[currentQuestion].questionText}
-          </p>
-
-          <div className="space-y-2 sm:space-y-3">
-            {questions[currentQuestion].options.map((opt, idx) => (
-              <label
-                key={idx}
-                className={`block p-2 sm:p-3 border rounded-lg cursor-pointer transition ${answers[currentQuestion] === opt
-                  ? "bg-blue-500 text-white border-blue-600"
-                  : "hover:bg-gray-100"
-                  }`}
+      {/* Main */}
+      <main className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        {/* Left: question area with bilingual columns */}
+        <section className="bg-white rounded shadow p-4">
+          <div className="flex items-start justify-between mb-4">
+            <h2 className="font-semibold">Question {current + 1} of {total}</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setCurrent((c) => Math.max(0, c - 1)); }}
+                disabled={current === 0}
+                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
               >
-                <input
-                  type="radio"
-                  name={`q${currentQuestion}`}
-                  value={opt}
-                  checked={answers[currentQuestion] === opt}
-                  onChange={() => handleAnswerSelect(opt)}
-                  className="mr-2 accent-blue-600"
-                />
-                {opt}
-              </label>
-            ))}
+                ← Previous
+              </button>
+              <button
+                onClick={() => { setCurrent((c) => Math.min(total - 1, c + 1)); }}
+                disabled={current === total - 1}
+                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              >
+                Next →
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 sm:mt-8 gap-3 sm:gap-0">
-            <button
-              onClick={() => setCurrentQuestion((prev) => Math.max(prev - 1, 0))}
-              disabled={currentQuestion === 0}
-              className="w-full sm:w-auto px-5 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 disabled:opacity-50"
-            >
-              ← Previous
-            </button>
+          {/* bilingual display: English left, Hindi right */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* English */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-800 mb-2">English</h3>
+              <div className="border rounded p-3 min-h-[160px]">
+                <p className="mb-3 text-gray-700">{getQuestionText(q, "en") || <span className="text-gray-400">No English text</span>}</p>
 
-            <button
-              onClick={() => setShowConfirmModal(true)}
-              className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700"
-            >
-              Submit Test
-            </button>
+                <div className="space-y-2">
+                  {getOptions(q, "en").map((opt, idx) => {
+                    const isSelected = selectedIndex === idx;
+                    return (
+                      <label key={idx} className={`block p-2 rounded cursor-pointer border ${isSelected ? "bg-blue-500 text-white border-blue-600" : "hover:bg-gray-50"}`}>
+                        <input
+                          type="radio"
+                          checked={isSelected}
+                          onChange={() => selectAnswer(current, idx)}
+                          className="mr-2"
+                        />
+                        {opt}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
 
+            {/* Hindi */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-800 mb-2">Hindi</h3>
+              <div className="border rounded p-3 min-h-[160px]">
+                <p className="mb-3 text-gray-700">{getQuestionText(q, "hi") || <span className="text-gray-400">No Hindi text</span>}</p>
+
+                <div className="space-y-2">
+                  {getOptions(q, "hi").map((opt, idx) => {
+                    const isSelected = selectedIndex === idx;
+                    return (
+                      <label key={idx} className={`block p-2 rounded cursor-pointer border ${isSelected ? "bg-blue-500 text-white border-blue-600" : "hover:bg-gray-50"}`}>
+                        <input
+                          type="radio"
+                          checked={isSelected}
+                          onChange={() => selectAnswer(current, idx)}
+                          className="mr-2"
+                        />
+                        {opt}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit center */}
+          <div className="flex justify-center mt-6">
             <button
-              onClick={() =>
-                setCurrentQuestion((prev) =>
-                  Math.min(prev + 1, totalQuestions - 1)
-                )
-              }
-              disabled={currentQuestion === totalQuestions - 1}
-              className="w-full sm:w-auto px-5 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+              onClick={handleSubmit}
+              className="px-6 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700 disabled:opacity-60"
+              disabled={saving}
             >
-              Next →
+              {saving ? "Submitting..." : "Submit Test"}
             </button>
           </div>
         </section>
 
-        {/* Question Grid */}
-        <aside className="md:w-1/4 bg-white rounded-lg shadow p-3 sm:p-4">
-          <h3 className="text-base sm:text-lg font-semibold text-center mb-2 sm:mb-3">
-            Questions
-          </h3>
-          <div className="grid grid-cols-10 sm:grid-cols-5 md:grid-cols-5 gap-2 overflow-x-auto p-1">
-            {answers.map((ans, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentQuestion(index)}
-                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-semibold transition ${index === currentQuestion
-                  ? "bg-blue-500 text-white"
-                  : ans
-                    ? "bg-green-500 text-white"
-                    : "bg-red-500 text-white"
-                  }`}
-              >
-                {index + 1}
-              </button>
-            ))}
+        {/* Right: question grid */}
+        <aside className="bg-white rounded shadow p-4">
+          <h3 className="font-semibold mb-3">Questions</h3>
+          <div className="grid grid-cols-5 gap-2">
+            {questions.map((_, i) => {
+              const ans = answers[i] !== null && answers[i] !== undefined;
+              const isCurrent = i === current;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setCurrent(i)}
+                  className={`w-8 h-8 rounded-full text-sm font-semibold ${isCurrent ? "bg-blue-500 text-white" : ans ? "bg-green-500 text-white" : "bg-gray-200 text-gray-700"}`}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
           </div>
         </aside>
       </main>
-
-      {/* Confirm Submit */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg p-6 text-center max-w-sm w-full">
-            <h2 className="text-lg font-semibold mb-3 text-gray-800">
-              Submit Test?b
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to submit the test? You cannot retake it once submitted.
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => {
-                  handleSubmit();
-                  setShowConfirmModal(false);
-                }}
-                className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                Yes, Submit
-              </button>
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
