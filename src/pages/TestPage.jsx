@@ -206,7 +206,7 @@ export default function TestPage() {
     setSubmitted(true);
     setSaving(false);
     // navigate to review (optional). If you have Review page route:
-    // navigate("/review");
+    navigate("/review");
   };
 
   // UI guards
@@ -321,7 +321,7 @@ export default function TestPage() {
             {/* English */}
             <div>
               <h3 className="text-sm font-medium text-gray-800 mb-2">English</h3>
-              <div className="border rounded p-3 min-h-[160px]">
+              <div className="border rounded p-3 min-h-40">
                 <p className="mb-3 text-gray-700">{getQuestionText(q, "en") || <span className="text-gray-400">No English text</span>}</p>
 
                 <div className="space-y-2">
@@ -346,7 +346,7 @@ export default function TestPage() {
             {/* Hindi */}
             <div>
               <h3 className="text-sm font-medium text-gray-800 mb-2">Hindi</h3>
-              <div className="border rounded p-3 min-h-[160px]">
+              <div className="border rounded p-3 min-h-40">
                 <p className="mb-3 text-gray-700">{getQuestionText(q, "hi") || <span className="text-gray-400">No Hindi text</span>}</p>
 
                 <div className="space-y-2">

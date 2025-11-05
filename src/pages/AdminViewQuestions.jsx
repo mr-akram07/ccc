@@ -38,7 +38,7 @@ export default function AdminViewQuestions() {
 
     const admin = JSON.parse(localStorage.getItem("ccc_admin"));
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/question/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/questions/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${admin.token}` },
       });
@@ -69,7 +69,7 @@ export default function AdminViewQuestions() {
     const admin = JSON.parse(localStorage.getItem("ccc_admin"));
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/admin/question/${editing}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/admin/questions/${editing}`,
         {
           method: "PUT",
           headers: {
@@ -79,17 +79,25 @@ export default function AdminViewQuestions() {
           body: JSON.stringify(editData),
         }
       );
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      setQuestions((prev) =>
-        prev.map((q) => (q._id === editing ? data.updated : q))
-      );
-      setMessage("✅ Question updated successfully!");
+      // Safely update questions list
+      if (data.updated) {
+        setQuestions((prev) =>
+          prev.map((q) => (q._id === editing ? data.updated : q))
+        );
+      }
+
+      // Reset edit state safely
       setEditing(null);
+      setEditData(null);
+
+      alert("✅ Question updated successfully!");
     } catch (err) {
-      console.error(err);
-      setMessage("❌ " + err.message);
+      console.error("Error updating question:", err);
+      alert("❌ " + err.message);
     }
   };
 
