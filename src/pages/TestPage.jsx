@@ -142,72 +142,39 @@ export default function TestPage() {
   };
 
   const handleSubmit = async () => {
-    if (submitted) return;
-    setSaving(true);
-
-    // calculate score
-    const total = questions.length;
-    let correctCount = 0;
-    const answersForPayload = [];
-
-    for (let i = 0; i < total; i++) {
-      const q = questions[i];
-      const userIdx = answers[i];
-      answersForPayload.push(userIdx === null || userIdx === undefined ? null : userIdx);
-      if (typeof q.correctAnswerIndex === "number" && q.correctAnswerIndex === userIdx) correctCount++;
-      else if (q.correctAnswer) {
-        // fall back: compare text
-        const userText = typeof userIdx === "number" && Array.isArray(q.options) ? q.options[userIdx] : null;
-        if (userText && String(userText).trim() === String(q.correctAnswer).trim()) correctCount++;
-      }
-    }
-
-    const percent = total ? ((correctCount / total) * 100).toFixed(2) : "0.00";
-
-    // save locally
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        answers: answersForPayload,
-        submitted: true,
-        score: correctCount,
-        totalQuestions: total,
-        percentage: percent,
-      }));
-    } catch (err) {
-      console.error("save local result:", err);
-    }
+      const student = JSON.parse(localStorage.getItem("ccc_student"));
+      const answersPayload = { answers };
 
-    // send to backend (requires logged-in student token)
-    try {
-      const user = JSON.parse(localStorage.getItem("ccc_user"));
-      if (user && user.token) {
-        await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/student/submit`, {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/student/submit`,
+        {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${user.token}`,
+            Authorization: `Bearer ${student.token}`,
           },
-          body: JSON.stringify({
-            name: user.user.name,
-            rollNumber: user.user.rollNumber,
-            answers: answersForPayload,
-            score: correctCount,
-            totalQuestions: total,
-            percentage: percent,
-          }),
-        });
-      } else {
-        console.warn("No user token found; result not sent to server.");
-      }
-    } catch (err) {
-      console.error("Error submitting result:", err);
-    }
+          body: JSON.stringify(answersPayload),
+        }
+      );
 
-    setSubmitted(true);
-    setSaving(false);
-    // navigate to review (optional). If you have Review page route:
-    navigate("/review");
+      const text = await res.text();
+      if (text.startsWith("<!DOCTYPE")) {
+        throw new Error("Backend returned HTML — check VITE_API_BASE_URL");
+      }
+
+      const data = JSON.parse(text);
+      if (!res.ok) throw new Error(data.message || "Submission failed");
+
+      alert("✅ Test submitted successfully!");
+      localStorage.removeItem("ccc_test_data");
+      window.location.href = "/student/review"; // or wherever you show results
+    } catch (err) {
+      console.error("Submit error:", err);
+      alert("❌ " + err.message);
+    }
   };
+
 
   // UI guards
   if (loadingQuestions) {
