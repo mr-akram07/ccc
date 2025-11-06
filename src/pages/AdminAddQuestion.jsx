@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 export default function AdminAddQuestion() {
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [questionText, setQuestionText] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
   const [correctAnswer, setCorrectAnswer] = useState("");
@@ -37,7 +39,7 @@ export default function AdminAddQuestion() {
     };
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/questions/add`, {
+      const res = await fetch(`${API_BASE}/api/admin/questions/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

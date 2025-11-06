@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function AdminViewQuestions() {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [questions, setQuestions] = useState([]);
   const [editing, setEditing] = useState(null);
   const [editData, setEditData] = useState({
@@ -19,7 +20,7 @@ export default function AdminViewQuestions() {
       if (!admin) return navigate("/admin");
 
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/questions`, {
+        const res = await fetch(`${API_BASE}/api/admin/questions`, {
           headers: { Authorization: `Bearer ${admin.token}` },
         });
         const data = await res.json();
@@ -38,7 +39,7 @@ export default function AdminViewQuestions() {
 
     const admin = JSON.parse(localStorage.getItem("ccc_admin"));
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/questions/${id}`, {
+      const res = await fetch(`${API_BASE}/api/admin/questions/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${admin.token}` },
       });
@@ -69,7 +70,7 @@ export default function AdminViewQuestions() {
     const admin = JSON.parse(localStorage.getItem("ccc_admin"));
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/admin/questions/${editing}`,
+        `${API_BASE}/api/admin/questions/${editing}`,
         {
           method: "PUT",
           headers: {

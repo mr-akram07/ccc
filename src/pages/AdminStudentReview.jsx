@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 export default function AdminStudentReview() {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [rollNumber, setRollNumber] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export default function AdminStudentReview() {
     try {
       const admin = JSON.parse(localStorage.getItem("ccc_admin"));
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/admin/student/${rollNumber}/review`,
+        `${API_BASE}/api/admin/student/${rollNumber}/review`,
         {
           headers: {
             Authorization: `Bearer ${admin.token}`,

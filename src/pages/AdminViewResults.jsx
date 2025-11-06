@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function AdminViewResults() {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [results, setResults] = useState([]);
   const navigate = useNavigate();
 
@@ -11,7 +12,7 @@ export default function AdminViewResults() {
 
     const fetchResults = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/results`, {
+        const res = await fetch(`${API_BASE}/api/admin/results`, {
           headers: { Authorization: `Bearer ${admin.token}` },
         });
         const data = await res.json();
