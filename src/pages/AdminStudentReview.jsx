@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 export default function AdminStudentReview() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-  const [rollNumber, setRollNumber] = useState("");
+  const location = useLocation();
+  const [rollNumber, setRollNumber] = useState(location.state?.rollNumber || "");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // 🔹 Auto-load if rollNumber is provided
+  useEffect(() => {
+    if (rollNumber) handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollNumber]);
 
   const handleSearch = async () => {
     if (!rollNumber.trim()) return alert("Please enter a roll number");
@@ -105,13 +113,12 @@ export default function AdminStudentReview() {
                     {q.options.map((opt, idx) => (
                       <li
                         key={idx}
-                        className={`p-2 rounded ${
-                          opt === q.correctAnswer
+                        className={`p-2 rounded ${opt === q.correctAnswer
                             ? "bg-green-100 text-green-700 font-semibold"
                             : opt === q.userAnswer
-                            ? "bg-red-100 text-red-700"
-                            : "bg-gray-100"
-                        }`}
+                              ? "bg-red-100 text-red-700"
+                              : "bg-gray-100"
+                          }`}
                       >
                         {opt}
                         {q.optionsHi?.[idx] && (

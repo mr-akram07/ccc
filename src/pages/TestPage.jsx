@@ -232,20 +232,31 @@ export default function TestPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
-      <header className="bg-white p-4 rounded shadow mb-4 flex items-center justify-between">
+      <header className="bg-white p-4 rounded-lg shadow mb-3 flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold">CCC Mock Test</h1>
-          <p className="text-sm text-gray-600">
-            {(() => {
-              const u = JSON.parse(localStorage.getItem("ccc_user"));
-              return u?.user ? `Welcome, ${u.user.name} (${u.user.rollNumber})` : "";
-            })()}
+          <h1 className="text-xl font-bold text-gray-700">CCC Mock Test</h1>
+          <p className="text-sm text-gray-500">
+            Time Left: <span className="text-red-600 font-semibold">{formatTime(timeLeft)}</span>
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-red-600 font-semibold">Time Left: {formatTime(timeLeft)}</div>
-          <button onClick={() => { localStorage.removeItem("ccc_user"); navigate("/login"); }} className="bg-red-600 text-white px-3 py-1 rounded">Logout</button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSubmit}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 shadow"
+            disabled={saving}
+          >
+            {saving ? "Submitting..." : "Submit Test"}
+          </button>
+          <button
+            onClick={() => {
+              localStorage.removeItem("ccc_user");
+              navigate("/login");
+            }}
+            className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600"
+          >
+            Logout
+          </button>
         </div>
       </header>
 
@@ -253,10 +264,6 @@ export default function TestPage() {
         <section className="bg-white rounded shadow p-4">
           <div className="flex items-start justify-between mb-4">
             <h2 className="font-semibold">Question {current + 1} of {total}</h2>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setCurrent((c) => Math.max(0, c - 1))} disabled={current === 0} className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">← Previous</button>
-              <button onClick={() => setCurrent((c) => Math.min(total - 1, c + 1))} disabled={current === total - 1} className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">Next →</button>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,8 +273,8 @@ export default function TestPage() {
                 <p className="mb-3 text-gray-700">{getQuestionText(q, "en") || <span className="text-gray-400">No English text</span>}</p>
                 <div
                   className={`grid ${getOptions(q, "en").length <= 2
-                      ? "grid-cols-1 sm:grid-cols-2"
-                      : "grid-cols-1"
+                    ? "grid-cols-1 sm:grid-cols-2"
+                    : "grid-cols-1"
                     } gap-2`}
                 >
                   {getOptions(q, "en").map((opt, idx) => {
@@ -276,8 +283,8 @@ export default function TestPage() {
                       <label
                         key={idx}
                         className={`flex items-center p-2 border rounded cursor-pointer transition ${isSelected
-                            ? "bg-blue-500 text-white border-blue-600"
-                            : "hover:bg-gray-50"
+                          ? "bg-blue-500 text-white border-blue-600"
+                          : "hover:bg-gray-50"
                           }`}
                       >
                         <input
@@ -313,12 +320,25 @@ export default function TestPage() {
               </div>
             </div>
           </div>
+          {/* 🔹 Navigation Buttons Below Question */}
+<div className="flex justify-between items-center mt-8">
+  <button
+    onClick={() => setCurrent((prev) => Math.max(prev - 1, 0))}
+    disabled={current === 0}
+    className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+  >
+    ← Previous
+  </button>
 
-          <div className="flex justify-center mt-6">
-            <button onClick={handleSubmit} className="px-6 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700 disabled:opacity-60" disabled={saving}>
-              {saving ? "Submitting..." : "Submit Test"}
-            </button>
-          </div>
+  <button
+    onClick={() => setCurrent((prev) => Math.min(prev + 1, questions.length - 1))}
+    disabled={current === questions.length - 1}
+    className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+  >
+    Next →
+  </button>
+</div>
+
         </section>
 
         <aside className="bg-white rounded shadow p-4">

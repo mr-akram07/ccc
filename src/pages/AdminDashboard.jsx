@@ -100,7 +100,7 @@ export default function AdminDashboard() {
             <h2 className="text-lg font-semibold text-gray-700 mb-3">🧠 Review Section</h2>
             <div className="flex justify-center">
               <button
-                onClick={() => navigate("/admin/student-review")}
+                onClick={() => navigate("/admin/review")}
                 className="px-6 py-3 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition"
               >
                 🔍 View Student Answers

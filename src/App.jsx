@@ -33,8 +33,8 @@ function App() {
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLoginPage />} />
+        <Route path="/admin/review" element={<AdminStudentReview />} />
         <Route path="/admin/results" element={<AdminViewResults />} />
-        <Route path="/admin/student-review" element={<AdminStudentReview />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/add" element={<AdminAddQuestion />} />
         <Route path="/admin/questions" element={<AdminViewQuestions />} />
