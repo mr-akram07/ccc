@@ -1,44 +1,69 @@
+// client/src/pages/AdminAddQuestion.jsx
 import { useState } from "react";
 
 export default function AdminAddQuestion() {
-
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const [questionType, setQuestionType] = useState("mcq"); // mcq | truefalse
   const [questionText, setQuestionText] = useState("");
+  const [questionTextHi, setQuestionTextHi] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
+  const [optionsHi, setOptionsHi] = useState(["", "", "", ""]);
   const [correctAnswer, setCorrectAnswer] = useState("");
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(null);
+  const [message, setMessage] = useState("");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  const [questionTextHi, setQuestionTextHi] = useState("");
-  const [optionsHi, setOptionsHi] = useState(["", "", "", ""]);
+  // 🔹 Auto-fill True/False
+  const handleTypeChange = (type) => {
+    setQuestionType(type);
+    if (type === "truefalse") {
+      setOptions(["True", "False"]);
+      setOptionsHi(["सही", "गलत"]);
+      setCorrectAnswer("");
+      setCorrectAnswerIndex(null);
+    } else {
+      setOptions(["", "", "", ""]);
+      setOptionsHi(["", "", "", ""]);
+      setCorrectAnswer("");
+      setCorrectAnswerIndex(null);
+    }
+  };
 
   const handleOptionChange = (index, value, lang = "en") => {
-    if (lang === "hi") {
-      const newOpts = [...optionsHi];
-      newOpts[index] = value;
-      setOptionsHi(newOpts);
+    if (lang === "en") {
+      const updated = [...options];
+      updated[index] = value;
+      setOptions(updated);
     } else {
-      const newOpts = [...options];
-      newOpts[index] = value;
-      setOptions(newOpts);
+      const updated = [...optionsHi];
+      updated[index] = value;
+      setOptionsHi(updated);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const admin = JSON.parse(localStorage.getItem("ccc_admin"));
-    if (!admin) return alert("Not logged in");
-
-    const payload = {
-      questionText,
-      options,
-      correctAnswer,
-      correctAnswerIndex,
-      questionTextHi,
-      optionsHi,
-    };
-
     try {
+      const admin = JSON.parse(localStorage.getItem("ccc_admin"));
+      if (!admin || !admin.token) {
+        alert("⚠️ Please login as admin.");
+        return;
+      }
+
+      if (!questionText.trim() || options.some((o) => !o.trim())) {
+        alert("Please fill all required fields.");
+        return;
+      }
+
+      const payload = {
+        questionText,
+        questionTextHi,
+        options,
+        optionsHi,
+        correctAnswer,
+        correctAnswerIndex,
+      };
+
       const res = await fetch(`${API_BASE}/api/admin/questions/add`, {
         method: "POST",
         headers: {
@@ -48,103 +73,145 @@ export default function AdminAddQuestion() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        alert("✅ Question added successfully");
-        setQuestionText("");
-        setQuestionTextHi("");
+      const text = await res.text();
+      if (text.startsWith("<!DOCTYPE")) throw new Error("Backend returned HTML");
+      const data = JSON.parse(text);
+      if (!res.ok) throw new Error(data.message);
+
+      setMessage("✅ Question added successfully!");
+      setQuestionText("");
+      setQuestionTextHi("");
+      if (questionType === "mcq") {
         setOptions(["", "", "", ""]);
         setOptionsHi(["", "", "", ""]);
-        setCorrectAnswer("");
-        setCorrectAnswerIndex(null);
-      } else {
-        alert("❌ Error: " + data.message);
       }
+      setCorrectAnswer("");
+      setCorrectAnswerIndex(null);
     } catch (err) {
-      console.error("Error submitting:", err);
-      alert("Something went wrong");
+      console.error("Error adding question:", err);
+      setMessage("❌ " + err.message);
     }
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto bg-white shadow rounded">
-      <h2 className="text-xl font-bold mb-4 text-center">🧠 Add Bilingual Question</h2>
+    <div className="min-h-screen bg-gray-100 flex justify-center items-start p-6">
+      <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-3xl">
+        <h1 className="text-2xl font-bold mb-4 text-center text-blue-700">
+          Add New Question
+        </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* English question */}
-        <div>
-          <label className="block font-semibold">Question (English)</label>
-          <input
-            value={questionText}
-            onChange={(e) => setQuestionText(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          />
+        {/* 🔹 Select Question Type */}
+        <div className="mb-6 flex justify-center gap-4">
+          <button
+            onClick={() => handleTypeChange("mcq")}
+            className={`px-4 py-2 rounded ${
+              questionType === "mcq"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-700"
+            }`}
+          >
+            Multiple Choice
+          </button>
+          <button
+            onClick={() => handleTypeChange("truefalse")}
+            className={`px-4 py-2 rounded ${
+              questionType === "truefalse"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-700"
+            }`}
+          >
+            True / False
+          </button>
         </div>
 
-        {/* Hindi question */}
-        <div>
-          <label className="block font-semibold">Question (Hindi)</label>
-          <input
-            value={questionTextHi}
-            onChange={(e) => setQuestionTextHi(e.target.value)}
-            className="border p-2 rounded w-full"
-            placeholder="Optional"
-          />
-        </div>
-
-        {/* Options (English + Hindi side by side) */}
-        {options.map((opt, i) => (
-          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input
-              placeholder={`Option ${i + 1} (English)`}
-              value={options[i]}
-              onChange={(e) => handleOptionChange(i, e.target.value, "en")}
-              className="border p-2 rounded"
-              required
-            />
-            <input
-              placeholder={`Option ${i + 1} (Hindi)`}
-              value={optionsHi[i]}
-              onChange={(e) => handleOptionChange(i, e.target.value, "hi")}
-              className="border p-2 rounded"
-            />
-          </div>
-        ))}
-
-        {/* Correct Answer */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* English Question */}
           <div>
-            <label className="block font-semibold">Correct Answer (English text)</label>
-            <input
-              value={correctAnswer}
-              onChange={(e) => setCorrectAnswer(e.target.value)}
-              className="border p-2 rounded w-full"
+            <label className="block font-semibold mb-1">Question (English)</label>
+            <textarea
+              value={questionText}
+              onChange={(e) => setQuestionText(e.target.value)}
+              className="w-full border rounded p-2"
+              placeholder="Enter question in English"
               required
-            />
+            ></textarea>
           </div>
 
+          {/* Hindi Question */}
           <div>
-            <label className="block font-semibold">Correct Answer Index (0–3)</label>
-            <input
-              type="number"
-              min="0"
-              max="3"
+            <label className="block font-semibold mb-1">Question (Hindi)</label>
+            <textarea
+              value={questionTextHi}
+              onChange={(e) => setQuestionTextHi(e.target.value)}
+              className="w-full border rounded p-2"
+              placeholder="हिंदी में प्रश्न लिखें"
+            ></textarea>
+          </div>
+
+          {/* Options (English + Hindi) */}
+          <div>
+            <label className="block font-semibold mb-2">Options</label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {options.map((opt, i) => (
+                <div key={i}>
+                  <input
+                    type="text"
+                    value={opt}
+                    onChange={(e) => handleOptionChange(i, e.target.value, "en")}
+                    className="w-full border rounded p-2 mb-1"
+                    placeholder={`Option ${i + 1} (English)`}
+                    required
+                  />
+                  <input
+                    type="text"
+                    value={optionsHi[i]}
+                    onChange={(e) => handleOptionChange(i, e.target.value, "hi")}
+                    className="w-full border rounded p-2"
+                    placeholder={`Option ${i + 1} (Hindi)`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Correct Answer */}
+          <div>
+            <label className="block font-semibold mb-2">Correct Answer</label>
+            <select
               value={correctAnswerIndex ?? ""}
-              onChange={(e) => setCorrectAnswerIndex(Number(e.target.value))}
+              onChange={(e) => {
+                const idx = Number(e.target.value);
+                setCorrectAnswerIndex(idx);
+                setCorrectAnswer(options[idx]);
+              }}
               className="border p-2 rounded w-full"
-              placeholder="Optional"
-            />
+              required
+            >
+              <option value="">Select correct answer</option>
+              {options.map((opt, i) => (
+                <option key={i} value={i}>
+                  {opt || `Option ${i + 1}`}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-        >
-          Submit Question
-        </button>
-      </form>
+          {/* Submit */}
+          <div className="flex justify-center">
+            <button
+              type="submit"
+              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+            >
+              Save Question
+            </button>
+          </div>
+        </form>
+
+        {message && (
+          <p className="text-center mt-4 font-semibold text-gray-700">{message}</p>
+        )}
+      </div>
     </div>
   );
 }

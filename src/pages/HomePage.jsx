@@ -13,7 +13,7 @@ export default function HomePage() {
       setUser(parsed.user);
     }
   }, []);
-
+  
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white flex flex-col items-center justify-center p-6">
       {/* Hero Section */}
