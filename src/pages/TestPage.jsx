@@ -271,28 +271,12 @@ export default function TestPage() {
               <h3 className="text-sm font-medium text-gray-800 mb-2">English</h3>
               <div className="border rounded p-3 min-h-40">
                 <p className="mb-3 text-gray-700">{getQuestionText(q, "en") || <span className="text-gray-400">No English text</span>}</p>
-                <div
-                  className={`grid ${getOptions(q, "en").length <= 2
-                    ? "grid-cols-1 sm:grid-cols-2"
-                    : "grid-cols-1"
-                    } gap-2`}
-                >
+                <div className={`grid ${getOptions(q, "en").length <= 2 ? "grid-cols-1 sm:grid-cols-1" : "grid-cols-1" } gap-2`}>
                   {getOptions(q, "en").map((opt, idx) => {
                     const isSelected = selectedIndex === idx;
                     return (
-                      <label
-                        key={idx}
-                        className={`flex items-center p-2 border rounded cursor-pointer transition ${isSelected
-                          ? "bg-blue-500 text-white border-blue-600"
-                          : "hover:bg-gray-50"
-                          }`}
-                      >
-                        <input
-                          type="radio"
-                          checked={isSelected}
-                          onChange={() => selectAnswer(current, idx)}
-                          className="mr-2 accent-blue-600"
-                        />
+                      <label key={idx} className={`flex items-center p-2 border rounded cursor-pointer transition ${isSelected ? "bg-blue-500 text-white border-blue-600" : "hover:bg-gray-50" }`}>
+                        <input type="radio" checked={isSelected} onChange={() => selectAnswer(current, idx)} className="mr-2 accent-blue-600"/>
                         {opt}
                       </label>
                     );

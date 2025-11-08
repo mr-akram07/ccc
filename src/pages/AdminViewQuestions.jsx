@@ -160,18 +160,20 @@ export default function AdminViewQuestions() {
                   </td>
 
                   <td className="border p-2 text-center space-x-1 sm:space-x-2">
-                    <button
-                      onClick={() => startEdit(q)}
-                      className="px-2 sm:px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(q._id)}
-                      className="px-2 sm:px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
-                    >
-                      🗑️ Delete
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => startEdit(q)}
+                        className="px-2 sm:px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(q._id)}
+                        className="px-2 sm:px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
