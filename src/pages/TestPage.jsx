@@ -20,7 +20,7 @@ export default function TestPage() {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState([]);
   const [current, setCurrent] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(60 * 30);
+  const [timeLeft, setTimeLeft] = useState(60 * 60);
   const [submitted, setSubmitted] = useState(false);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -145,6 +145,19 @@ export default function TestPage() {
 
   const handleSubmit = async () => {
     if (submitted) return;
+
+    // 🧮 Count skipped questions only
+    const skipped = answers.filter((a) => a === null || a === undefined).length;
+
+    // ⚠️ Confirmation popup
+    const confirmMsg =
+      skipped > 0
+        ? `⚠️ You have ${skipped} unattempted question${skipped > 1 ? "s" : ""}.\n\nDo you still want to submit the test?`
+        : "Are you sure you want to submit the test?";
+
+    const confirmed = window.confirm(confirmMsg);
+    if (!confirmed) return; // ❌ Cancel submission if user says no
+
     setSaving(true);
     try {
       const user = JSON.parse(localStorage.getItem("ccc_user"));
@@ -154,7 +167,6 @@ export default function TestPage() {
         return;
       }
 
-      // Submit answers as indices (server should accept this form)
       const payload = { answers };
 
       const res = await fetch(`${API_BASE}/api/student/submit`, {
@@ -167,13 +179,20 @@ export default function TestPage() {
       });
 
       const text = await res.text();
-      if (text.startsWith("<!DOCTYPE")) throw new Error("Backend returned HTML — check VITE_API_BASE_URL");
+      if (text.startsWith("<!DOCTYPE"))
+        throw new Error("Backend returned HTML — check VITE_API_BASE_URL");
       const data = JSON.parse(text);
       if (!res.ok) throw new Error(data.message || "Submission failed");
 
-      // Save summary locally (score calculation can be done by backend; if backend returns result use it)
+      // ✅ Save summary locally
       if (data.score != null && data.totalQuestions != null) {
-        const obj = { answers, submitted: true, score: data.score, totalQuestions: data.totalQuestions, percentage: data.percentage ?? null };
+        const obj = {
+          answers,
+          submitted: true,
+          score: data.score,
+          totalQuestions: data.totalQuestions,
+          percentage: data.percentage ?? null,
+        };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
       } else {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, submitted: true }));
@@ -181,7 +200,6 @@ export default function TestPage() {
 
       setSubmitted(true);
       alert("✅ Test submitted successfully!");
-      // redirect to review page (student review)
       navigate("/review");
     } catch (err) {
       console.error("Submit error:", err);

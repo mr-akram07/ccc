@@ -50,15 +50,14 @@ export default function StudentReviewPage() {
     fetchReview();
   }, [navigate, API_BASE]);
 
-  if (loading) {
+  if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-600">
         Loading your review...
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-red-600 p-4 text-center">
         <p className="text-lg font-semibold mb-3">❌ Error</p>
@@ -71,9 +70,8 @@ export default function StudentReviewPage() {
         </button>
       </div>
     );
-  }
 
-  if (!reviewData?.review?.length) {
+  if (!reviewData?.review?.length)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-gray-600">
         <h2 className="text-xl font-semibold mb-2">No Review Data Found</h2>
@@ -85,7 +83,6 @@ export default function StudentReviewPage() {
         </button>
       </div>
     );
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -105,43 +102,46 @@ export default function StudentReviewPage() {
 
         {/* 🧾 Review List */}
         <div className="space-y-4">
-          {reviewData.review.map((q, i) => (
-            <div
-              key={i}
-              className={`p-4 border rounded-lg transition ${
-                q.isCorrect
-                  ? "bg-green-50 border-green-400"
-                  : "bg-red-50 border-red-400"
-              }`}
-            >
-              <p className="font-semibold text-gray-800 mb-2">
-                Q{i + 1}: {q.questionText || "Untitled Question"}
-              </p>
-              <ul className="space-y-1">
-                {(q.options || []).map((opt, idx) => (
-                  <li
-                    key={idx}
-                    className={`p-2 rounded text-sm sm:text-base ${
-                      opt === q.correctAnswer
-                        ? "bg-green-200 text-green-800 font-medium"
-                        : opt === q.userAnswer
-                        ? "bg-red-200 text-red-800"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    {opt}
-                  </li>
-                ))}
-              </ul>
+          {reviewData.review.map((q, i) => {
+            const notAttempted = q.userAnswer === null || q.userAnswer === undefined;
+            const statusColor = notAttempted
+              ? "bg-yellow-50 border-yellow-400"
+              : q.isCorrect
+              ? "bg-green-50 border-green-400"
+              : "bg-red-50 border-red-400";
 
-              {/* Show Hindi question if available */}
-              {q.questionTextHi && (
-                <p className="mt-2 text-gray-600 text-sm italic">
-                  {q.questionTextHi}
+            return (
+              <div key={i} className={`p-4 border rounded-lg transition ${statusColor}`}>
+                <p className="font-semibold text-gray-800 mb-2">
+                  Q{i + 1}: {q.questionText || "Untitled Question"}
                 </p>
-              )}
-            </div>
-          ))}
+
+                <ul className="space-y-1">
+                  {(q.options || []).map((opt, idx) => {
+                    let bg = "bg-gray-100";
+                    if (notAttempted && opt === q.correctAnswer)
+                      bg = "bg-yellow-200 text-yellow-900 font-medium";
+                    else if (opt === q.correctAnswer)
+                      bg = "bg-green-200 text-green-800 font-medium";
+                    else if (opt === q.userAnswer)
+                      bg = "bg-red-200 text-red-800";
+
+                    return (
+                      <li key={idx} className={`p-2 rounded text-sm sm:text-base ${bg}`}>
+                        {opt}
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {q.questionTextHi && (
+                  <p className="mt-2 text-gray-600 text-sm italic">
+                    {q.questionTextHi}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex justify-center mt-8">
