@@ -59,7 +59,7 @@ export default function AdminLoginPage() {
         icon: "success",
         title: "Welcome, Admin!",
         showConfirmButton: false,
-        timer: 1200,
+        timer: 1500,
         timerProgressBar: true,
       });
 

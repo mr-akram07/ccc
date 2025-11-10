@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 export default function AdminDashboard() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -125,7 +126,7 @@ export default function AdminDashboard() {
             }).then((result) => {
               if (result.isConfirmed) {
                 localStorage.removeItem("ccc_user");
-                navigate("/login");
+                navigate("/");
               }
             });
           }}
