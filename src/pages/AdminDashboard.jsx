@@ -114,8 +114,20 @@ export default function AdminDashboard() {
         {/* 🚪 Logout */}
         <button
           onClick={() => {
-            localStorage.removeItem("ccc_admin");
-            navigate("/");
+            Swal.fire({
+              title: "Logout?",
+              text: "Are you sure you want to log out?",
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonText: "Yes, Logout",
+              confirmButtonColor: "#3085d6",
+              cancelButtonColor: "#d33",
+            }).then((result) => {
+              if (result.isConfirmed) {
+                localStorage.removeItem("ccc_user");
+                navigate("/login");
+              }
+            });
           }}
           className="mt-6 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
         >

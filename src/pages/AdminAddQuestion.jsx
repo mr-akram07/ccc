@@ -1,5 +1,5 @@
 // client/src/pages/AdminAddQuestion.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function AdminAddQuestion() {
   const [questionType, setQuestionType] = useState("mcq"); // mcq | truefalse
@@ -11,6 +11,13 @@ export default function AdminAddQuestion() {
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(null);
   const [message, setMessage] = useState("");
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
+  // Clear message after 3 seconds
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   // 🔹 Auto-fill True/False
   const handleTypeChange = (type) => {

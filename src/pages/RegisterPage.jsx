@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function RegisterPage() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -26,15 +27,32 @@ export default function RegisterPage() {
       setLoading(false);
 
       if (!res.ok) {
-        setMessage(data.message || "Registration failed");
+        Swal.fire({
+          icon: "error",
+          title: "Registration Failed",
+          text: data.message || "Registration Failed",
+          confirmButtonColor: "#2563eb",
+        });
         return;
       }
 
-      setMessage("Registration successful! You can now log in.");
+      Swal.fire({
+        icon: "success",
+        title: "Registration Successful",
+        text: "You can now Login.",
+        showConfirmButton: false,
+        timer: 1500,
+        timerProgressBar: true,
+      });
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
-      setMessage("Something went wrong. Please try again.");
       setLoading(false);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Something went wrong. Please try again.",
+        confirmButtonColor: "#2563eb",
+      });
     }
   };
 
@@ -47,11 +65,10 @@ export default function RegisterPage() {
 
         {message && (
           <p
-            className={`p-2 mb-4 rounded ${
-              message.includes("successful")
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-600"
-            }`}
+            className={`p-2 mb-4 rounded ${message.includes("successful")
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-600"
+              }`}
           >
             {message}
           </p>

@@ -1,6 +1,7 @@
 // client/src/pages/TestPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 /*
  Final stable TestPage:
@@ -30,8 +31,14 @@ export default function TestPage() {
   useEffect(() => {
     const u = JSON.parse(localStorage.getItem("ccc_user"));
     if (!u || !u.token) {
-      alert("⚠️ Please log in first to attempt the test.");
-      navigate("/login");
+      Swal.fire({
+        icon: "warning",
+        title: "Login Required",
+        text: "Please log in first to attempt the test.",
+        confirmButtonColor: "#3085d6",
+      }).then(() => {
+        navigate("/login");
+      });
     }
   }, [navigate]);
 
@@ -146,23 +153,34 @@ export default function TestPage() {
   const handleSubmit = async () => {
     if (submitted) return;
 
-    // 🧮 Count skipped questions only
     const skipped = answers.filter((a) => a === null || a === undefined).length;
 
-    // ⚠️ Confirmation popup
-    const confirmMsg =
-      skipped > 0
-        ? `⚠️ You have ${skipped} unattempted question${skipped > 1 ? "s" : ""}.\n\nDo you still want to submit the test?`
-        : "Are you sure you want to submit the test?";
+    // 🧾 SweetAlert confirmation popup
+    const result = await Swal.fire({
+      title: skipped > 0 ? "Some questions are unattempted!" : "Submit Test?",
+      text:
+        skipped > 0
+          ? `You have ${skipped} unattempted question${skipped > 1 ? "s" : ""}. Do you still want to submit the test?`
+          : "Are you sure you want to submit your test?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Submit",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#16a34a",
+      cancelButtonColor: "#d33",
+    });
 
-    const confirmed = window.confirm(confirmMsg);
-    if (!confirmed) return; // ❌ Cancel submission if user says no
+    if (!result.isConfirmed) return;
 
     setSaving(true);
     try {
       const user = JSON.parse(localStorage.getItem("ccc_user"));
       if (!user || !user.token) {
-        alert("Session expired — please log in again.");
+        await Swal.fire({
+          icon: "error",
+          title: "Session expired",
+          text: "Please log in again.",
+        });
         navigate("/login");
         return;
       }
@@ -179,31 +197,43 @@ export default function TestPage() {
       });
 
       const text = await res.text();
-      if (text.startsWith("<!DOCTYPE"))
-        throw new Error("Backend returned HTML — check VITE_API_BASE_URL");
+      if (text.startsWith("<!DOCTYPE")) throw new Error("Backend returned HTML");
       const data = JSON.parse(text);
       if (!res.ok) throw new Error(data.message || "Submission failed");
 
-      // ✅ Save summary locally
       if (data.score != null && data.totalQuestions != null) {
-        const obj = {
-          answers,
-          submitted: true,
-          score: data.score,
-          totalQuestions: data.totalQuestions,
-          percentage: data.percentage ?? null,
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            answers,
+            submitted: true,
+            score: data.score,
+            totalQuestions: data.totalQuestions,
+            percentage: data.percentage ?? null,
+          })
+        );
       } else {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, submitted: true }));
       }
 
       setSubmitted(true);
-      alert("✅ Test submitted successfully!");
+
+      // 🎉 Success popup
+      await Swal.fire({
+        icon: "success",
+        title: "Test Submitted Successfully!",
+        text: "Your answers have been submitted.",
+        confirmButtonColor: "#3085d6",
+      });
+
       navigate("/review");
     } catch (err) {
       console.error("Submit error:", err);
-      alert("Submission error: " + (err.message || err));
+      await Swal.fire({
+        icon: "error",
+        title: "Submission Failed",
+        text: err.message || "Something went wrong during submission.",
+      });
     } finally {
       setSaving(false);
     }
@@ -268,8 +298,20 @@ export default function TestPage() {
           </button>
           <button
             onClick={() => {
-              localStorage.removeItem("ccc_user");
-              navigate("/login");
+              Swal.fire({
+                title: "Logout?",
+                text: "Are you sure you want to log out?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Yes, Logout",
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  localStorage.removeItem("ccc_user");
+                  navigate("/login");
+                }
+              });
             }}
             className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600"
           >
@@ -289,12 +331,12 @@ export default function TestPage() {
               <h3 className="text-sm font-medium text-gray-800 mb-2">English</h3>
               <div className="border rounded p-3 min-h-40">
                 <p className="mb-3 text-gray-700">{getQuestionText(q, "en") || <span className="text-gray-400">No English text</span>}</p>
-                <div className={`grid ${getOptions(q, "en").length <= 2 ? "grid-cols-1 sm:grid-cols-1" : "grid-cols-1" } gap-2`}>
+                <div className={`grid ${getOptions(q, "en").length <= 2 ? "grid-cols-1 sm:grid-cols-1" : "grid-cols-1"} gap-2`}>
                   {getOptions(q, "en").map((opt, idx) => {
                     const isSelected = selectedIndex === idx;
                     return (
-                      <label key={idx} className={`flex items-center p-2 border rounded cursor-pointer transition ${isSelected ? "bg-blue-500 text-white border-blue-600" : "hover:bg-gray-50" }`}>
-                        <input type="radio" checked={isSelected} onChange={() => selectAnswer(current, idx)} className="mr-2 accent-blue-600"/>
+                      <label key={idx} className={`flex items-center p-2 border rounded cursor-pointer transition ${isSelected ? "bg-blue-500 text-white border-blue-600" : "hover:bg-gray-50"}`}>
+                        <input type="radio" checked={isSelected} onChange={() => selectAnswer(current, idx)} className="mr-2 accent-blue-600" />
                         {opt}
                       </label>
                     );
@@ -323,23 +365,23 @@ export default function TestPage() {
             </div>
           </div>
           {/* 🔹 Navigation Buttons Below Question */}
-<div className="flex justify-between items-center mt-8">
-  <button
-    onClick={() => setCurrent((prev) => Math.max(prev - 1, 0))}
-    disabled={current === 0}
-    className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 disabled:opacity-50"
-  >
-    ← Previous
-  </button>
+          <div className="flex justify-between items-center mt-8">
+            <button
+              onClick={() => setCurrent((prev) => Math.max(prev - 1, 0))}
+              disabled={current === 0}
+              className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+            >
+              ← Previous
+            </button>
 
-  <button
-    onClick={() => setCurrent((prev) => Math.min(prev + 1, questions.length - 1))}
-    disabled={current === questions.length - 1}
-    className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 disabled:opacity-50"
-  >
-    Next →
-  </button>
-</div>
+            <button
+              onClick={() => setCurrent((prev) => Math.min(prev + 1, questions.length - 1))}
+              disabled={current === questions.length - 1}
+              className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+            >
+              Next →
+            </button>
+          </div>
 
         </section>
 

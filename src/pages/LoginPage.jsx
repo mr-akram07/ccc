@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -11,33 +12,52 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rollNumber, password }),
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rollNumber, password }),
+    });
+
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      Swal.fire({
+        icon: "error",
+        title: "Login Failed",
+        text: data.message || "Invalid login credentials",
+        confirmButtonColor: "#2563eb",
       });
-
-      const data = await res.json();
-      setLoading(false);
-
-      if (!res.ok) {
-        setError(data.message || "Invalid login credentials");
-        return;
-      }
-
-      // Save token & user info in localStorage
-      localStorage.setItem("ccc_user", JSON.stringify(data));
-      navigate("/");
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
-      setLoading(false);
+      return;
     }
-  };
+
+    // Save token & user info in localStorage
+    localStorage.setItem("ccc_user", JSON.stringify(data));
+
+    Swal.fire({
+      icon: "success",
+      title: "Login Successful!",
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+    });
+
+    setTimeout(() => navigate("/"), 1500);
+  } catch (err) {
+    setLoading(false);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Something went wrong. Please try again.",
+      confirmButtonColor: "#2563eb",
+    });
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-linear-to-b from-blue-50 to-white p-6">

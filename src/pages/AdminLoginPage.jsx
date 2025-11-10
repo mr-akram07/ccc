@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 export default function AdminLoginPage() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -7,10 +9,12 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -19,18 +23,56 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ rollNumber, password }),
       });
 
-      const data = await res.json();
-      if (!res.ok) return setError(data.message);
+      const text = await res.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { message: text || "Unexpected response from server" };
+      }
 
-      if (data.user.role !== "admin") {
-        setError("Access denied — not an admin");
+      setLoading(false);
+
+      if (!res.ok) {
+        await Swal.fire({
+          icon: "error",
+          title: "Login Failed",
+          text: data.message || "Invalid credentials",
+          confirmButtonColor: "#1f2937",
+        });
+        return;
+      }
+
+      if (!data.user || data.user.role !== "admin") {
+        await Swal.fire({
+          icon: "warning",
+          title: "Access Denied",
+          text: "Only admin accounts can access this page.",
+          confirmButtonColor: "#1f2937",
+        });
         return;
       }
 
       localStorage.setItem("ccc_admin", JSON.stringify(data));
+
+      await Swal.fire({
+        icon: "success",
+        title: "Welcome, Admin!",
+        showConfirmButton: false,
+        timer: 1200,
+        timerProgressBar: true,
+      });
+
       navigate("/admin/dashboard");
-    } catch {
-      setError("Login failed");
+    } catch (err) {
+      console.error("Login error:", err);
+      setLoading(false);
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Something went wrong. Please try again.",
+        confirmButtonColor: "#1f2937",
+      });
     }
   };
 
@@ -60,9 +102,10 @@ export default function AdminLoginPage() {
           />
           <button
             type="submit"
-            className="bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900"
+            disabled={loading}
+            className="bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition disabled:opacity-50"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>

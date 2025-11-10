@@ -1,6 +1,6 @@
-// client/src/pages/AdminViewQuestions.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function AdminViewQuestions() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -16,6 +16,13 @@ export default function AdminViewQuestions() {
   });
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
+  // 🕒 Auto-hide success/error messages
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   // 🧠 Fetch all questions
   useEffect(() => {
@@ -38,7 +45,19 @@ export default function AdminViewQuestions() {
 
   // 🗑️ Delete question
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this question?")) return;
+    const confirmResult = await Swal.fire({
+      title: "Are you sure?",
+      text: "This question will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Delete it",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#6c757d",
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
     const admin = JSON.parse(localStorage.getItem("ccc_admin"));
 
     try {
@@ -50,10 +69,23 @@ export default function AdminViewQuestions() {
       if (!res.ok) throw new Error(data.message);
 
       setQuestions((prev) => prev.filter((q) => q._id !== id));
-      setMessage("✅ Question deleted successfully!");
+
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: "Question deleted successfully.",
+        confirmButtonColor: "#3085d6",
+        timer: 2000,
+        timerProgressBar: true,
+      });
     } catch (err) {
       console.error(err);
-      setMessage("❌ " + err.message);
+      Swal.fire({
+        icon: "error",
+        title: "Error!",
+        text: err.message || "Failed to delete the question.",
+        confirmButtonColor: "#d33",
+      });
     }
   };
 
@@ -90,10 +122,22 @@ export default function AdminViewQuestions() {
         prev.map((q) => (q._id === editing ? { ...q, ...editData } : q))
       );
       setEditing(null);
-      setMessage("✅ Question updated successfully!");
+      Swal.fire({
+        icon: "success",
+        title: "Updated",
+        text: "Question updated successfully.",
+        confirmButtonColor: "#3085d6",
+        timer: 1500,
+        timerProgressBar: true,
+      });
     } catch (err) {
-      console.error("Error updating question:", err);
-      alert("❌ " + err.message);
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Error!",
+        text: err.message || "Failed to update the question.",
+        confirmButtonColor: "#d33",
+      });
     }
   };
 

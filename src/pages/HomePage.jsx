@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export default function HomePage() {
       setUser(parsed.user);
     }
   }, []);
-  
+
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white flex flex-col items-center justify-center p-6">
       {/* Hero Section */}
@@ -67,8 +68,30 @@ export default function HomePage() {
           )}
 
           {/* Start Test */}
+          {/* Start Test */}
           <button
-            onClick={() => navigate("/test")}
+            onClick={() => {
+              const stored = localStorage.getItem("ccc_user");
+              if (!stored) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "Login Required",
+                  text: "You need to log in to start the test.",
+                  showCancelButton: true,
+                  confirmButtonText: "Login Now",
+                  cancelButtonText: "Login Later",
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#6c757d",
+                  reverseButtons: true,
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    navigate("/login");
+                  }
+                });
+              } else {
+                navigate("/test");
+              }
+            }}
             className="px-8 py-3 bg-green-600 text-white text-lg rounded-lg shadow hover:bg-green-700 transition"
           >
             Start Test
@@ -78,9 +101,22 @@ export default function HomePage() {
           {user && (
             <button
               onClick={() => {
-                localStorage.removeItem("ccc_user");
-                setUser(null);
-                window.location.reload();
+                Swal.fire({
+                  title: "Logout?",
+                  text: "Are you sure you want to log out?",
+                  icon: "question",
+                  showCancelButton: true,
+                  confirmButtonText: "Yes, Logout",
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#d33",
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    localStorage.removeItem("ccc_user");
+                    navigate("/");
+                    setUser(null);
+                    window.location.reload();
+                  }
+                });
               }}
               className="px-8 py-3 bg-red-600 text-white text-lg rounded-lg shadow hover:bg-red-700 transition"
             >
