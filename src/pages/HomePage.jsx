@@ -111,7 +111,7 @@ export default function HomePage() {
                   cancelButtonColor: "#d33",
                 }).then((result) => {
                   if (result.isConfirmed) {
-                    localStorage.removeItem("ccc_user");
+                    localStorage.clear();
                     navigate("/");
                     setUser(null);
                     window.location.reload();

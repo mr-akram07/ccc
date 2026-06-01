@@ -8,4 +8,10 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
+  server: {
+    allowedHosts: [
+      "venatic-loree-unpolemical.ngrok-free.dev"
+    ],
+    host: true
+  }
 })

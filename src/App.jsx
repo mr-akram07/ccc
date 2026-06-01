@@ -11,6 +11,7 @@ import AdminViewQuestions from "./pages/AdminViewQuestions";
 import AdminViewResults from "./pages/AdminViewResults";
 import StudentReviewPage from "./pages/StudentReviewPage"
 import AdminStudentReview from "./pages/AdminStudentReview";
+import AdminManageStudents from "./pages/AdminManageStudents";
 
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/add" element={<AdminAddQuestion />} />
         <Route path="/admin/questions" element={<AdminViewQuestions />} />
+        <Route path="/admin/manage-students" element={<AdminManageStudents />} />
       </Routes>
     </Router>
   );

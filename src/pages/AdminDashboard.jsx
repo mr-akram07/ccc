@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import { Link } from "react-router-dom";
 
 export default function AdminDashboard() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -76,6 +77,11 @@ export default function AdminDashboard() {
           <div>
             <h2 className="text-lg font-semibold text-gray-700 mb-3">📘 Management</h2>
             <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4">
+              <Link to="/admin/manage-students">
+                <button className="px-6 py-3 bg-orange-600 text-white rounded-lg shadow hover:bg-orange-700 transition">
+                  👨‍🎓Manage Students
+                </button>
+              </Link>
               <button
                 onClick={() => navigate("/admin/add")}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
